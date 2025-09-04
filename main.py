@@ -9,16 +9,16 @@ dir_path = os.path.dirname(sys.executable) if isFrozen else os.path.dirname(os.p
 args = sys.argv
 
 imageGrid = None
-saveDir = dir_path
-imageFilename = ""
-cellSize = 1.0
-modelHeight = 1.0
+saveDirectory = dir_path
+pathToImage = ""
+cellSize = 0.1
+modelHeight = 0.5
 objFilename = "model.obj"
 gridFilename = "grid.json"
 
-def getGridFromImage(imageFilename):
+def getGridFromImage(pathToImage):
     
-    img = cv2.imread(imageFilename,0)
+    img = cv2.imread(pathToImage,0)
     rows,cols = img.shape
 
     imageGrid = []
@@ -86,12 +86,12 @@ def generateObjFromGrid(grid, cell_size=1.0, height=1.0):
     return {"vertices": vertices, "faces": faces}
 
 def saveFiles():
-    global imageGrid, saveDir, cellSize, modelHeight, objFilename, gridFilename
+    global imageGrid, saveDirectory, cellSize, modelHeight, objFilename, gridFilename
     
     mesh = generateObjFromGrid(imageGrid,cellSize,modelHeight)
     
     # Write OBJ file
-    with open(os.path.join(saveDir,objFilename), "w") as f:
+    with open(os.path.join(saveDirectory,objFilename), "w") as f:
         for v in mesh["vertices"]:
             f.write(f"v {v[2]} {v[1]} {v[0]}\n")
         for face in mesh["faces"]:
@@ -100,7 +100,7 @@ def saveFiles():
     print(f"OBJ file saved as {objFilename}")
     
     # Write Grid file
-    with open(os.path.join(saveDir,gridFilename), "w") as f:
+    with open(os.path.join(saveDirectory,gridFilename), "w") as f:
         json.dump({"grid":imageGrid},f)
 
     print(f"Grid file saved as {gridFilename}")   
@@ -116,7 +116,7 @@ def getNextArg():
         return None
 
 def main():
-    global saveDir, imageGrid, imageFilename, cellSize, modelHeight, objFilename, gridFilename
+    global saveDirectory, imageGrid, pathToImage, cellSize, modelHeight, objFilename, gridFilename
     
     getNextArg()
     
@@ -125,19 +125,19 @@ def main():
         return
     
     if arg == "help":
-        print("Usage: python main.py [imageFilename]* [cellSize] [modelHeight] [objFilename] [gridFilename]")
+        print("Usage: python main.py [pathToImage]* [saveDirectory] [cellSize] [modelHeight] [objFilename] [gridFilename]")
         print("Arguments annotated with '*' are required")
         print("\nDefaults")
-        print(f"saveDir:\t{saveDir}\ncellSize:\t{cellSize}\nmodelHeight:\t{modelHeight}\nobjFilename:\t{objFilename}\ngridFilename:\t{gridFilename}")
+        print(f"saveDirectory:\t{saveDirectory}\ncellSize:\t{cellSize}\nmodelHeight:\t{modelHeight}\nobjFilename:\t{objFilename}\ngridFilename:\t{gridFilename}")
         return
     else:
-        imageFilename = arg
+        pathToImage = arg
         
-    saveDir = getNextArg() or os.path.abspath(saveDir)
-    if not saveDir:
+    saveDirectory = getNextArg() or os.path.abspath(saveDirectory)
+    if not saveDirectory:
         return
     
-    if not os.path.exists(saveDir):
+    if not os.path.exists(saveDirectory):
         print("Save Directory does not exist")
         return
         
@@ -167,7 +167,7 @@ def main():
         print("gridFilename extension must be .json")
         return
     
-    imageGrid = getGridFromImage(imageFilename)
+    imageGrid = getGridFromImage(pathToImage)
     
     saveFiles()
     

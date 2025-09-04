@@ -1,4 +1,5 @@
 build
 *.png
+!example.png
 *.obj
 *.json

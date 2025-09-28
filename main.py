@@ -2,6 +2,7 @@ import os
 import cv2
 import json
 import sys
+import math
 
 isFrozen = getattr(sys,"frozen",False)
 
@@ -35,14 +36,33 @@ def generateObjFromGrid(grid, cell_size=1.0, height=1.0):
         
     vertices = []
     faces = []
+    normals = []
 
     def add_face(verts):
         """verts: list of 4 [x, y, z]"""
         idx_start = len(vertices) + 1
         vertices.extend(verts)
-        # two triangles per quad
-        faces.append([idx_start, idx_start + 1, idx_start + 2])
-        faces.append([idx_start, idx_start + 2, idx_start + 3])
+
+        # normal from first 3 verts
+        n = compute_normal(verts[0], verts[1], verts[2])
+        normals.append(n)
+        n_idx = len(normals)
+
+        # two triangles, with normals
+        faces.append([(idx_start, n_idx), (idx_start+1, n_idx), (idx_start+2, n_idx)])
+        faces.append([(idx_start, n_idx), (idx_start+2, n_idx), (idx_start+3, n_idx)])
+        
+    def normalize(v):
+        length = math.sqrt(v[0]**2 + v[1]**2 + v[2]**2)
+        return [v[0]/length, v[1]/length, v[2]/length] if length > 0 else [0,0,0]
+
+    def compute_normal(v1, v2, v3):
+        # Cross product (v2-v1) x (v3-v1)
+        uz, uy, ux = v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]
+        vz, vy, vx = v3[0]-v1[0], v3[1]-v1[1], v3[2]-v1[2]
+        return normalize([uy*vz - uz*vy,
+                        uz*vx - ux*vz,
+                        ux*vy - uy*vx])
 
     for r in range(rows):
         for c in range(cols):
@@ -92,10 +112,17 @@ def generateObjFromGrid(grid, cell_size=1.0, height=1.0):
     ]
     idx_start = len(vertices) + 1
     vertices.extend(ground)
-    faces.append([idx_start, idx_start + 1, idx_start + 2])
-    faces.append([idx_start, idx_start + 2, idx_start + 3])
+    normal = [0, 1, 0]  
+    normals.append(normal)
+    n_idx = len(normals)
+
+    faces.append([(idx_start, n_idx), (idx_start + 1, n_idx), (idx_start + 2, n_idx)])
+    faces.append([(idx_start, n_idx), (idx_start + 2, n_idx), (idx_start + 3, n_idx)])
+    faces.append([(idx_start+2, n_idx), (idx_start + 1, n_idx), (idx_start, n_idx)])
+    faces.append([(idx_start+3, n_idx), (idx_start + 2, n_idx), (idx_start, n_idx)])
+
     
-    return {"vertices": vertices, "faces": faces}
+    return {"vertices": vertices, "faces": faces, "normals": normals}
 
 def saveFiles():
     global imageGrid, saveDirectory, cellSize, modelHeight, objFilename, gridFilename
@@ -106,8 +133,11 @@ def saveFiles():
     with open(os.path.join(saveDirectory,objFilename), "w") as f:
         for v in mesh["vertices"]:
             f.write(f"v {v[2]} {v[1]} {v[0]}\n")
+        for n in mesh["normals"]:
+            f.write(f"vn {n[0]} {n[1]} {n[2]}\n")
         for face in mesh["faces"]:
-            f.write(f"f {' '.join(str(i) for i in face)}\n")
+            # face is list of (vertex_index, normal_index)
+            f.write("f " + " ".join(f"{vi}//{ni}" for vi,ni in face) + "\n")
 
     print(f"OBJ file saved as {objFilename}")
     

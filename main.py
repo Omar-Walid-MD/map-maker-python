@@ -11,8 +11,8 @@ args = sys.argv
 imageGrid = None
 saveDirectory = dir_path
 pathToImage = ""
-cellSize = 0.1
-modelHeight = 0.5
+cellSize = 0.5
+modelHeight = 2
 objFilename = "model.obj"
 gridFilename = "grid.json"
 
@@ -82,7 +82,19 @@ def generateObjFromGrid(grid, cell_size=1.0, height=1.0):
                     nc = c + dx
                     if nr < 0 or nr >= rows or nc < 0 or nc >= cols or grid[nr][nc] == 1:
                         add_face(face)
-
+                        
+    ground_y = 0  # same as wall bottom
+    ground = [
+        [0, ground_y, 0],
+        [cols * cell_size, ground_y, 0],
+        [cols * cell_size, ground_y, rows * cell_size],
+        [0, ground_y, rows * cell_size],
+    ]
+    idx_start = len(vertices) + 1
+    vertices.extend(ground)
+    faces.append([idx_start, idx_start + 1, idx_start + 2])
+    faces.append([idx_start, idx_start + 2, idx_start + 3])
+    
     return {"vertices": vertices, "faces": faces}
 
 def saveFiles():
